@@ -38,7 +38,10 @@ run CTranslate2 on the CPU.
 - [Supported formats](#supported-formats)
 - [Use it again later](#use-it-again-later)
 - [Identify different speakers](#identify-different-speakers)
+- [Advanced usage](#advanced-usage)
+- [Limitations and FAQ](#limitations-and-faq)
 - [Common problems](#common-problems)
+- [Uninstalling](#uninstalling)
 - [What runs behind the scenes](#what-runs-behind-the-scenes)
 - [Contributing and issues](#contributing-and-issues)
 - [License](#license)
@@ -222,7 +225,11 @@ hf auth login
 Normal transcription still produces `.txt` and `.srt` files if speaker
 identification cannot run.
 
-See [Advanced usage](docs/advanced-usage.md).
+## Advanced usage
+
+See [Advanced usage](docs/advanced-usage.md) for speed tuning and additional commands.
+
+## Limitations and FAQ
 
 See [Limitations and FAQ](docs/faq.md).
 
@@ -265,6 +272,8 @@ Confirm that you accepted the Hugging Face model terms and ran:
 ```bash
 hf auth login
 ```
+
+## Uninstalling
 
 See [Uninstalling](docs/uninstalling.md).
 
