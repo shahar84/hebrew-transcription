@@ -27,6 +27,9 @@ output/
 └── interview.srt
 ```
 
+Each run also prints a timing summary for audio preparation, model loading,
+transcription, file writing, optional diarization, and total wall-clock time.
+
 For speaker diarization:
 
 ```bash
@@ -154,16 +157,30 @@ If transcription works but diarization fails, the script deliberately keeps the 
 The default configuration is:
 
 ```text
-device=cpu
+device=auto
 compute_type=int8
+diarization_device=auto
 ```
 
-That makes the project easy to run on a Mac without an NVIDIA GPU.
+The two models use different acceleration backends:
+
+- faster-whisper uses CTranslate2. It automatically uses CUDA on supported
+  NVIDIA systems, but CTranslate2 does not support Apple Metal/MPS, so it uses
+  the optimized ARM CPU path on Apple Silicon.
+- speaker diarization uses PyTorch. It automatically prefers CUDA, then Apple
+  Metal/MPS, then CPU. If an automatically selected GPU cannot run a model
+  operation, the diarization pass retries on CPU.
+
+You can override either decision:
+
+```bash
+python transcribe.py audio.mp3 --device cpu --diarization-device cpu
+```
 
 For supported NVIDIA machines you can try:
 
 ```bash
-python transcribe.py audio.mp3 --device cuda --compute-type float16
+python transcribe.py audio.mp3 --device cuda --compute-type float16 --diarization-device cuda
 ```
 
 ## Claude Code / Codex prompt

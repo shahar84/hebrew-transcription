@@ -1,2 +1,8 @@
 faster-whisper>=1.1.0,<2
 pyannote.audio>=3.3,<4
+# pyannote.audio 3.x still passes the pre-1.0 use_auth_token Hub argument.
+huggingface-hub>=0.21,<1
+# The diarization checkpoint needs torch.load's pre-2.6 default behavior.
+# This also keeps torchaudio.AudioMetaData, which pyannote.audio 3.x imports.
+torch>=2.2,<2.6
+torchaudio>=2.2,<2.6
