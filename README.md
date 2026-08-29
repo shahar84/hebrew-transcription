@@ -6,6 +6,29 @@ transcript, subtitles, and optionally a version labeled by speaker.
 It automatically finds the fastest transcription engine for your computer.
 On Apple Silicon Macs, it can use the Apple GPU through MLX.
 
+It supports macOS, Linux, and Windows. Linux and Windows can use an NVIDIA GPU
+through CUDA when the required NVIDIA libraries are installed; otherwise they
+run CTranslate2 on the CPU.
+
+## What to expect
+
+- **Model downloads:** the current
+  [CTranslate2 model](https://huggingface.co/ivrit-ai/whisper-large-v3-turbo-ct2)
+  is **1.622 GB** and the current
+  [MLX model](https://huggingface.co/mlx-community/ivrit-ai-whisper-large-v3-turbo-mlx)
+  is **1.614 GB**. Apple Silicon automatic mode downloads both, for **3.24 GB
+  total**. Linux, Windows, and Intel Macs download only the 1.622 GB
+  CTranslate2 model.
+- **Disk space:** on Apple Silicon, allow at least **5 GB free** for the two
+  models and Python dependencies, plus space for your own media and output.
+  Dependency sizes vary by operating system and CUDA setup, so there is no
+  single exact total for every Linux or Windows computer.
+- **First-run time:** the first run downloads the models and performs one-time
+  speed tests, so its total time depends mostly on your internet connection and
+  hardware. On the M5 Max used to test this project, expect roughly one minute
+  of one-time tuning after the downloads; a 6-minute video then takes about
+  8-10 seconds on later MLX runs. CPU and NVIDIA timings will differ.
+
 ## Install on macOS
 
 You only need to do this once.
@@ -47,9 +70,56 @@ python transcribe.py --help
 Installation is successful when the last command displays the available
 options without an error.
 
+## Install on Linux
+
+These commands are for Ubuntu and Debian. Other Linux distributions need the
+equivalent Python 3.10-or-newer, FFmpeg, Git, and virtual-environment packages.
+Confirm that `python3 --version` reports Python 3.10 or newer before continuing.
+
+```bash
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip ffmpeg git
+git clone https://github.com/shahar84/hebrew-transcription.git
+cd hebrew-transcription
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python transcribe.py --help
+```
+
+For NVIDIA acceleration, install **CUDA 12 with cuBLAS and cuDNN 9** as
+described in the
+[faster-whisper GPU requirements](https://github.com/SYSTRAN/faster-whisper#gpu).
+The normal `--backend auto` mode will detect a working NVIDIA GPU; no MLX
+installation is needed on Linux.
+
+## Install on Windows
+
+First install [Python 3.12](https://www.python.org/downloads/),
+[Git](https://git-scm.com/download/win), and
+[FFmpeg](https://ffmpeg.org/download.html). Make sure each command is available
+in `PATH`, then open PowerShell and run:
+
+```powershell
+git clone https://github.com/shahar84/hebrew-transcription.git
+cd hebrew-transcription
+py -3.12 -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python transcribe.py --help
+```
+
+For NVIDIA acceleration, install **CUDA 12 with cuBLAS and cuDNN 9** as
+described in the
+[faster-whisper GPU requirements](https://github.com/SYSTRAN/faster-whisper#gpu).
+Automatic mode uses the GPU when CTranslate2 detects it and otherwise uses the
+CPU.
+
 ## Transcribe your first file
 
-While still in the same Terminal window, run:
+While still in the same Terminal or PowerShell window, run:
 
 ```bash
 python transcribe.py "/full/path/to/video.mp4"
@@ -76,13 +146,37 @@ output/
 - `.txt` is the readable transcript.
 - `.srt` contains timed subtitles for video players and editors.
 
+For example, the text file contains one transcribed segment per line:
+
+```text
+שלום וברוכים הבאים.
+היום נדבר על בינה מלאכותית.
+תודה שהצטרפתם אלינו.
+```
+
+The subtitle file includes the same text with timestamps:
+
+```srt
+1
+00:00:00,000 --> 00:00:03,200
+שלום וברוכים הבאים.
+```
+
 ## Use it again later
 
-Every time you open a new Terminal window, run these commands first:
+Every time you open a new Terminal or PowerShell window, first change into
+wherever you cloned the repository. For example:
 
 ```bash
-cd ~/hebrew-transcription
+cd /path/to/hebrew-transcription
 source .venv/bin/activate
+```
+
+On Windows PowerShell, activate it with:
+
+```powershell
+cd C:\path\to\hebrew-transcription
+.venv\Scripts\Activate.ps1
 ```
 
 Then transcribe a file:
@@ -114,9 +208,10 @@ output/interview_with_speakers.txt
 The labels look like `SPEAKER_00` and `SPEAKER_01`. The software separates the
 voices, but it does not know their real names.
 
-Speaker identification may require a free Hugging Face account and permission
-to use the diarization model. After accepting any model terms, log in from
-Terminal with:
+Speaker identification uses the
+[configured ivrit.ai diarization model](https://huggingface.co/ivrit-ai/pyannote-speaker-diarization-3.1).
+It is currently public, but if Hugging Face asks for authentication or displays
+terms for your account, accept them on that page and then log in from Terminal:
 
 ```bash
 hf auth login
@@ -126,6 +221,9 @@ Normal transcription still produces `.txt` and `.srt` files if speaker
 identification cannot run.
 
 ## Automatic speed selection
+
+MLX and CTranslate2 are two different engines that do the same transcription
+job at different speeds, depending on your hardware.
 
 The normal command uses `--backend auto`. On the first run, the software:
 
@@ -251,3 +349,7 @@ hf auth login
 - `pyannote.audio` optionally separates speakers.
 
 Everything runs locally after the models have been downloaded.
+
+## License
+
+This project is available under the [MIT License](LICENSE).
