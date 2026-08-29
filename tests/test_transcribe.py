@@ -28,8 +28,207 @@ def fake_torch(cuda_available=False, mps_available=False):
 
 def test_device_defaults_are_automatic():
     args = transcribe.parse_args(["recording.wav"])
+    assert args.backend == "auto"
     assert args.device == "auto"
     assert args.diarization_device == "auto"
+    assert args.cpu_threads == "auto"
+
+
+@pytest.mark.parametrize(("value", "expected"), [("auto", "auto"), ("14", 14)])
+def test_parse_cpu_threads(value, expected):
+    assert transcribe.parse_cpu_threads(value) == expected
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "many"])
+def test_parse_cpu_threads_rejects_invalid_values(value):
+    with pytest.raises(Exception, match="positive integer"):
+        transcribe.parse_cpu_threads(value)
+
+
+def test_cpu_thread_candidates_are_bounded_and_sorted():
+    candidates = transcribe.cpu_thread_candidates(18)
+    assert candidates == [4, 8, 12, 14, 16, 18]
+
+
+def test_cpu_thread_tuning_is_cached(tmp_path, monkeypatch):
+    cache_path = tmp_path / "tuning.json"
+    monkeypatch.setattr(transcribe, "cpu_tuning_key", lambda model, compute: "key")
+    calls = []
+
+    def benchmark(audio_path, model_name, compute_type):
+        calls.append(audio_path)
+        return 14, {4: 2.0, 14: 1.0}
+
+    first = transcribe.select_cpu_threads(
+        "auto",
+        tmp_path / "audio.wav",
+        "model",
+        "int8",
+        cache_path=cache_path,
+        benchmark_function=benchmark,
+    )
+    second = transcribe.select_cpu_threads(
+        "auto",
+        tmp_path / "audio.wav",
+        "model",
+        "int8",
+        cache_path=cache_path,
+        benchmark_function=benchmark,
+    )
+
+    assert first == second == 14
+    assert len(calls) == 1
+
+
+def test_malformed_cpu_thread_cache_is_replaced(tmp_path, monkeypatch):
+    cache_path = tmp_path / "tuning.json"
+    cache_path.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(transcribe, "cpu_tuning_key", lambda model, compute: "key")
+
+    selected = transcribe.select_cpu_threads(
+        "auto",
+        tmp_path / "audio.wav",
+        "model",
+        "int8",
+        cache_path=cache_path,
+        benchmark_function=lambda *args: (8, {8: 1.0}),
+    )
+
+    assert selected == 8
+    assert transcribe.load_cached_cpu_threads(cache_path, "key") == 8
+
+
+def test_explicit_cpu_threads_skip_tuning(tmp_path):
+    assert (
+        transcribe.select_cpu_threads(
+            8,
+            tmp_path / "audio.wav",
+            "model",
+            "int8",
+            benchmark_function=lambda *args: pytest.fail("unexpected benchmark"),
+        )
+        == 8
+    )
+
+
+def test_mlx_availability_requires_apple_silicon_and_package():
+    found = lambda name: object()
+    missing = lambda name: None
+
+    assert transcribe.mlx_is_available("Darwin", "arm64", found)
+    assert not transcribe.mlx_is_available("Darwin", "x86_64", found)
+    assert not transcribe.mlx_is_available("Linux", "arm64", found)
+    assert not transcribe.mlx_is_available("Darwin", "arm64", missing)
+
+
+def test_auto_backend_uses_cached_winner(tmp_path):
+    cache_path = tmp_path / "backend.json"
+    transcribe.save_backend_tuning(
+        cache_path, "machine", "mlx", {"ctranslate2": 5.0, "mlx": 1.0}
+    )
+
+    assert (
+        transcribe.choose_transcription_backend(
+            "auto",
+            mlx_available=True,
+            cache_path=cache_path,
+            cache_key="machine",
+        )
+        == "mlx"
+    )
+
+
+def test_auto_backend_requests_benchmark_without_cache(tmp_path):
+    assert (
+        transcribe.choose_transcription_backend(
+            "auto",
+            mlx_available=True,
+            cache_path=tmp_path / "missing.json",
+            cache_key="machine",
+        )
+        is None
+    )
+
+
+def test_auto_backend_uses_ctranslate2_when_mlx_is_unavailable():
+    assert (
+        transcribe.choose_transcription_backend("auto", mlx_available=False)
+        == "ctranslate2"
+    )
+
+
+def test_explicit_mlx_rejects_unsupported_machine():
+    with pytest.raises(RuntimeError, match="Apple Silicon"):
+        transcribe.choose_transcription_backend("mlx", mlx_available=False)
+
+
+def test_backend_benchmark_selects_fastest(monkeypatch, tmp_path):
+    times = iter([0.0, 5.0, 10.0, 11.0])
+    monkeypatch.setattr(transcribe.time, "perf_counter", lambda: next(times))
+
+    def run_ctranslate2(*args, **kwargs):
+        return [transcribe.Segment(0, 1, "שלום")]
+
+    def run_mlx(*args, **kwargs):
+        return [transcribe.Segment(0, 1, "שלום")]
+
+    backend, scores = transcribe.benchmark_transcription_backends(
+        tmp_path / "sample.wav",
+        ctranslate2_model="ct2",
+        mlx_model="mlx",
+        device="cpu",
+        compute_type="int8",
+        cpu_threads=8,
+        ctranslate2_function=run_ctranslate2,
+        mlx_function=run_mlx,
+    )
+
+    assert backend == "mlx"
+    assert scores == {"ctranslate2": 5.0, "mlx": 1.0}
+
+
+def test_backend_benchmark_uses_working_engine(monkeypatch, tmp_path):
+    times = iter([0.0, 1.0, 2.0])
+    monkeypatch.setattr(transcribe.time, "perf_counter", lambda: next(times))
+
+    backend, scores = transcribe.benchmark_transcription_backends(
+        tmp_path / "sample.wav",
+        ctranslate2_model="ct2",
+        mlx_model="mlx",
+        device="cpu",
+        compute_type="int8",
+        cpu_threads=8,
+        ctranslate2_function=lambda *args, **kwargs: (_ for _ in ()).throw(
+            RuntimeError("broken")
+        ),
+        mlx_function=lambda *args, **kwargs: [
+            transcribe.Segment(0, 1, "שלום")
+        ],
+    )
+
+    assert backend == "mlx"
+    assert scores == {"mlx": 1.0}
+
+
+def test_mlx_transcription_converts_segments(tmp_path):
+    fake_whisper = SimpleNamespace(
+        transcribe=lambda *args, **kwargs: {
+            "segments": [
+                {"start": 0, "end": 1.25, "text": " שלום "},
+                {"start": 1.25, "end": 2, "text": "  "},
+            ]
+        }
+    )
+    fake_core = SimpleNamespace(synchronize=lambda: None)
+
+    segments = transcribe.transcribe_audio_mlx(
+        tmp_path / "audio.wav",
+        "model",
+        mlx_whisper_module=fake_whisper,
+        mlx_core_module=fake_core,
+    )
+
+    assert segments == [transcribe.Segment(0.0, 1.25, "שלום")]
 
 
 def test_transcription_device_uses_cuda_when_ctranslate2_supports_it():

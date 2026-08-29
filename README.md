@@ -4,8 +4,9 @@ A tiny local CLI for transcribing Hebrew audio and video with [ivrit.ai](https:/
 
 It uses:
 
-- `faster-whisper`
-- `ivrit-ai/whisper-large-v3-turbo-ct2`
+- `faster-whisper` with `ivrit-ai/whisper-large-v3-turbo-ct2`
+- `mlx-whisper` with `mlx-community/ivrit-ai-whisper-large-v3-turbo-mlx`
+  on Apple Silicon
 - FFmpeg for video/audio conversion
 - optional speaker diarization with `ivrit-ai/pyannote-speaker-diarization-3.1`
 
@@ -157,13 +158,27 @@ If transcription works but diarization fails, the script deliberately keeps the 
 The default configuration is:
 
 ```text
+backend=auto
 device=auto
 compute_type=int8
 diarization_device=auto
+cpu_threads=auto
 ```
 
-The two models use different acceleration backends:
+On an Apple Silicon Mac with MLX installed, the first automatic run benchmarks
+MLX and CTranslate2 on the same 60-second sample and caches the faster backend.
+Later runs immediately reuse that choice. On other machines, automatic mode
+uses CTranslate2. You can force or refresh the choice with:
 
+```bash
+python transcribe.py audio.mp3 --backend mlx
+python transcribe.py audio.mp3 --backend ctranslate2
+python transcribe.py audio.mp3 --retune-backend
+```
+
+The engines use different acceleration backends:
+
+- MLX Whisper uses the Apple GPU on Apple Silicon.
 - faster-whisper uses CTranslate2. It automatically uses CUDA on supported
   NVIDIA systems, but CTranslate2 does not support Apple Metal/MPS, so it uses
   the optimized ARM CPU path on Apple Silicon.
@@ -175,6 +190,15 @@ You can override either decision:
 
 ```bash
 python transcribe.py audio.mp3 --device cpu --diarization-device cpu
+```
+
+When CTranslate2 runs on CPU, the CLI also benchmarks a short sample with
+several thread counts and caches the fastest result for that machine, model,
+compute type, and CTranslate2 version. Override or refresh it with:
+
+```bash
+python transcribe.py audio.mp3 --cpu-threads 8
+python transcribe.py audio.mp3 --retune-cpu-threads
 ```
 
 For supported NVIDIA machines you can try:
