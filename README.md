@@ -10,6 +10,27 @@ It supports macOS, Linux, and Windows. Linux and Windows can use an NVIDIA GPU
 through CUDA when the required NVIDIA libraries are installed; otherwise they
 run CTranslate2 on the CPU.
 
+## Table of contents
+
+- [What to expect](#what-to-expect)
+- [Quick start](#quick-start)
+- [Install on macOS](#install-on-macos)
+- [Install on Linux](#install-on-linux)
+- [Install on Windows](#install-on-windows)
+- [Transcribe your first file](#transcribe-your-first-file)
+- [Supported formats](#supported-formats)
+- [Use it again later](#use-it-again-later)
+- [Identify different speakers](#identify-different-speakers)
+- [Automatic speed selection](#automatic-speed-selection)
+- [More useful commands](#more-useful-commands)
+- [Update the project](#update-the-project)
+- [Limitations and FAQ](#limitations-and-faq)
+- [Common problems](#common-problems)
+- [Uninstalling](#uninstalling)
+- [What runs behind the scenes](#what-runs-behind-the-scenes)
+- [Contributing and issues](#contributing-and-issues)
+- [License](#license)
+
 ## What to expect
 
 - **Model downloads:** the current
@@ -28,6 +49,19 @@ run CTranslate2 on the CPU.
   hardware. On the M5 Max used to test this project, expect roughly one minute
   of one-time tuning after the downloads; a 6-minute video then takes about
   8-10 seconds on later MLX runs. CPU and NVIDIA timings will differ.
+
+## Quick start
+
+macOS or Linux:
+
+```bash
+git clone https://github.com/shahar84/hebrew-transcription.git
+cd hebrew-transcription
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python transcribe.py --help
+```
 
 ## Install on macOS
 
@@ -161,6 +195,17 @@ The subtitle file includes the same text with timestamps:
 00:00:00,000 --> 00:00:03,200
 שלום וברוכים הבאים.
 ```
+
+## Supported formats
+
+The tool accepts these file types:
+
+- **Audio:** `.wav`, `.mp3`, `.m4a`, `.aac`, `.flac`, `.ogg`, `.opus`
+- **Video:** `.mp4`, `.mov`, `.mkv`, `.webm`, `.avi`, `.m4v`
+
+Audio and video that need conversion are converted to mono, 16 kHz WAV with
+FFmpeg before transcription. An unsupported extension stops the run with an
+`Unsupported file format` error; no transcript or subtitle file is created.
 
 ## Use it again later
 
@@ -300,6 +345,31 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
+## Limitations and FAQ
+
+### Is there a maximum file length or size?
+
+The code does not set a maximum. The practical limit depends on available disk
+space, memory, and processing time. Non-WAV inputs temporarily use additional
+disk space while FFmpeg creates a 16 kHz WAV file.
+
+### Is internet access required after the first run?
+
+Not for normal transcription after the required models are cached locally.
+Internet access is still needed to download a missing model, authenticate with
+Hugging Face, or rerun a backend test when one of its models is not cached.
+
+### Does accuracy vary with the recording?
+
+Yes. Background noise, overlapping speakers, very quiet audio, strong accents,
+and low-quality recordings can reduce transcription and speaker-label accuracy.
+
+### Can it transcribe languages other than Hebrew?
+
+No. The included models are fine-tuned for Hebrew, and the code explicitly sets
+the language to Hebrew. There is no command-line option to select another
+language.
+
 ## Common problems
 
 ### `brew: command not found`
@@ -340,6 +410,48 @@ Confirm that you accepted the Hugging Face model terms and ran:
 hf auth login
 ```
 
+## Uninstalling
+
+Before deleting the virtual environment, run this command from the activated
+repository environment:
+
+```bash
+hf cache delete
+```
+
+Select `ivrit-ai/whisper-large-v3-turbo-ct2` and
+`mlx-community/ivrit-ai-whisper-large-v3-turbo-mlx` to remove the downloaded
+transcription models and reclaim the model space documented in
+[What to expect](#what-to-expect). If you no longer need speaker identification,
+you can also select `ivrit-ai/pyannote-speaker-diarization-3.1`,
+`ivrit-ai/pyannote-segmentation-3.0`, and
+`pyannote/wespeaker-voxceleb-resnet34-LM` when they appear in the cache list.
+
+To keep the repository but remove its Python environment:
+
+```bash
+deactivate
+rm -rf .venv
+```
+
+To remove the complete cloned repository on macOS or Linux, leave its folder
+and delete it. This also deletes its `output` folder, so copy any transcripts
+you want to keep first:
+
+```bash
+deactivate
+cd ..
+rm -rf hebrew-transcription
+```
+
+On Windows PowerShell:
+
+```powershell
+deactivate
+cd ..
+Remove-Item -Recurse -Force hebrew-transcription
+```
+
 ## What runs behind the scenes
 
 - [ivrit.ai](https://huggingface.co/ivrit-ai) provides the Hebrew Whisper models.
@@ -349,6 +461,11 @@ hf auth login
 - `pyannote.audio` optionally separates speakers.
 
 Everything runs locally after the models have been downloaded.
+
+## Contributing and issues
+
+Report bugs, request improvements, or propose contributions on the repository's
+[GitHub Issues page](https://github.com/shahar84/hebrew-transcription/issues).
 
 ## License
 
