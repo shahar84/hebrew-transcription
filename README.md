@@ -10,27 +10,6 @@ It supports macOS, Linux, and Windows. Linux and Windows can use an NVIDIA GPU
 through CUDA when the required NVIDIA libraries are installed; otherwise they
 run CTranslate2 on the CPU.
 
-## Table of contents
-
-- [What to expect](#what-to-expect)
-- [Quick start](#quick-start)
-- [Install on macOS](#install-on-macos)
-- [Install on Linux](#install-on-linux)
-- [Install on Windows](#install-on-windows)
-- [Transcribe your first file](#transcribe-your-first-file)
-- [Supported formats](#supported-formats)
-- [Use it again later](#use-it-again-later)
-- [Identify different speakers](#identify-different-speakers)
-- [Automatic speed selection](#automatic-speed-selection)
-- [More useful commands](#more-useful-commands)
-- [Update the project](#update-the-project)
-- [Limitations and FAQ](#limitations-and-faq)
-- [Common problems](#common-problems)
-- [Uninstalling](#uninstalling)
-- [What runs behind the scenes](#what-runs-behind-the-scenes)
-- [Contributing and issues](#contributing-and-issues)
-- [License](#license)
-
 ## What to expect
 
 - **Model downloads:** the current
@@ -49,6 +28,31 @@ run CTranslate2 on the CPU.
   hardware. On the M5 Max used to test this project, expect roughly one minute
   of one-time tuning after the downloads; a 6-minute video then takes about
   8-10 seconds on later MLX runs. CPU and NVIDIA timings will differ.
+
+## Table of contents
+
+- [What to expect](#what-to-expect)
+- [Quick start](#quick-start)
+- [Install on macOS](#install-on-macos)
+- [Transcribe your first file](#transcribe-your-first-file)
+- [Supported formats](#supported-formats)
+- [Use it again later](#use-it-again-later)
+- [Identify different speakers](#identify-different-speakers)
+- [Advanced usage](#advanced-usage)
+- [Limitations and FAQ](#limitations-and-faq)
+- [Common problems](#common-problems)
+- [Uninstalling](#uninstalling)
+- [What runs behind the scenes](#what-runs-behind-the-scenes)
+- [Contributing and issues](#contributing-and-issues)
+- [License](#license)
+
+### More docs
+
+- [Linux install](docs/linux-install.md)
+- [Windows install](docs/windows-install.md)
+- [Limitations and FAQ](docs/faq.md)
+- [Uninstalling](docs/uninstalling.md)
+- [Advanced usage](docs/advanced-usage.md)
 
 ## Quick start
 
@@ -104,52 +108,8 @@ python transcribe.py --help
 Installation is successful when the last command displays the available
 options without an error.
 
-## Install on Linux
-
-These commands are for Ubuntu and Debian. Other Linux distributions need the
-equivalent Python 3.10-or-newer, FFmpeg, Git, and virtual-environment packages.
-Confirm that `python3 --version` reports Python 3.10 or newer before continuing.
-
-```bash
-sudo apt update
-sudo apt install -y python3 python3-venv python3-pip ffmpeg git
-git clone https://github.com/shahar84/hebrew-transcription.git
-cd hebrew-transcription
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python transcribe.py --help
-```
-
-For NVIDIA acceleration, install **CUDA 12 with cuBLAS and cuDNN 9** as
-described in the
-[faster-whisper GPU requirements](https://github.com/SYSTRAN/faster-whisper#gpu).
-The normal `--backend auto` mode will detect a working NVIDIA GPU; no MLX
-installation is needed on Linux.
-
-## Install on Windows
-
-First install [Python 3.12](https://www.python.org/downloads/),
-[Git](https://git-scm.com/download/win), and
-[FFmpeg](https://ffmpeg.org/download.html). Make sure each command is available
-in `PATH`, then open PowerShell and run:
-
-```powershell
-git clone https://github.com/shahar84/hebrew-transcription.git
-cd hebrew-transcription
-py -3.12 -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python transcribe.py --help
-```
-
-For NVIDIA acceleration, install **CUDA 12 with cuBLAS and cuDNN 9** as
-described in the
-[faster-whisper GPU requirements](https://github.com/SYSTRAN/faster-whisper#gpu).
-Automatic mode uses the GPU when CTranslate2 detects it and otherwise uses the
-CPU.
+Using Linux or Windows? See [Linux install](docs/linux-install.md) or
+[Windows install](docs/windows-install.md).
 
 ## Transcribe your first file
 
@@ -265,110 +225,13 @@ hf auth login
 Normal transcription still produces `.txt` and `.srt` files if speaker
 identification cannot run.
 
-## Automatic speed selection
+## Advanced usage
 
-MLX and CTranslate2 are two different engines that do the same transcription
-job at different speeds, depending on your hardware.
-
-The normal command uses `--backend auto`. On the first run, the software:
-
-1. Tests CTranslate2 and, when available, Apple MLX on the same 60-second sample.
-2. Selects the faster engine.
-3. Saves that choice for future runs.
-
-The first run is therefore slower because it downloads the models and performs
-the one-time tests. Later runs start immediately with the saved engine.
-
-To repeat the speed test:
-
-```bash
-python transcribe.py "audio.mp3" --retune-backend
-```
-
-To choose an engine yourself:
-
-```bash
-python transcribe.py "audio.mp3" --backend mlx
-python transcribe.py "audio.mp3" --backend ctranslate2
-```
-
-MLX works only on Apple Silicon Macs. On other computers, automatic mode uses
-CTranslate2. If MLX fails during an automatic run, the software retries with
-CTranslate2.
-
-When CTranslate2 uses the CPU, the software also tests different CPU thread
-counts once and remembers the fastest setting. To repeat that test:
-
-```bash
-python transcribe.py "audio.mp3" --retune-cpu-threads
-```
-
-## More useful commands
-
-Transcribe audio:
-
-```bash
-python transcribe.py "recording.mp3"
-```
-
-Transcribe video with two speakers:
-
-```bash
-python transcribe.py "interview.mp4" --speakers 2
-```
-
-Run speaker identification without specifying the number of speakers:
-
-```bash
-python transcribe.py "meeting.m4a" --diarize
-```
-
-Choose a different output folder:
-
-```bash
-python transcribe.py "interview.mp4" --output-dir transcripts
-```
-
-Show every available option:
-
-```bash
-python transcribe.py --help
-```
-
-## Update the project
-
-From the repository folder:
-
-```bash
-git pull
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-```
+See [Advanced usage](docs/advanced-usage.md) for speed tuning and additional commands.
 
 ## Limitations and FAQ
 
-### Is there a maximum file length or size?
-
-The code does not set a maximum. The practical limit depends on available disk
-space, memory, and processing time. Non-WAV inputs temporarily use additional
-disk space while FFmpeg creates a 16 kHz WAV file.
-
-### Is internet access required after the first run?
-
-Not for normal transcription after the required models are cached locally.
-Internet access is still needed to download a missing model, authenticate with
-Hugging Face, or rerun a backend test when one of its models is not cached.
-
-### Does accuracy vary with the recording?
-
-Yes. Background noise, overlapping speakers, very quiet audio, strong accents,
-and low-quality recordings can reduce transcription and speaker-label accuracy.
-
-### Can it transcribe languages other than Hebrew?
-
-No. The included models are fine-tuned for Hebrew, and the code explicitly sets
-the language to Hebrew. There is no command-line option to select another
-language.
+See [Limitations and FAQ](docs/faq.md).
 
 ## Common problems
 
@@ -412,45 +275,7 @@ hf auth login
 
 ## Uninstalling
 
-Before deleting the virtual environment, run this command from the activated
-repository environment:
-
-```bash
-hf cache delete
-```
-
-Select `ivrit-ai/whisper-large-v3-turbo-ct2` and
-`mlx-community/ivrit-ai-whisper-large-v3-turbo-mlx` to remove the downloaded
-transcription models and reclaim the model space documented in
-[What to expect](#what-to-expect). If you no longer need speaker identification,
-you can also select `ivrit-ai/pyannote-speaker-diarization-3.1`,
-`ivrit-ai/pyannote-segmentation-3.0`, and
-`pyannote/wespeaker-voxceleb-resnet34-LM` when they appear in the cache list.
-
-To keep the repository but remove its Python environment:
-
-```bash
-deactivate
-rm -rf .venv
-```
-
-To remove the complete cloned repository on macOS or Linux, leave its folder
-and delete it. This also deletes its `output` folder, so copy any transcripts
-you want to keep first:
-
-```bash
-deactivate
-cd ..
-rm -rf hebrew-transcription
-```
-
-On Windows PowerShell:
-
-```powershell
-deactivate
-cd ..
-Remove-Item -Recurse -Force hebrew-transcription
-```
+See [Uninstalling](docs/uninstalling.md).
 
 ## What runs behind the scenes
 
